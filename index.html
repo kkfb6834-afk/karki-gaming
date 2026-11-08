@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html>
 <head>
@@ -7,102 +6,138 @@
 <style>
 body {
   margin:0;
-  background:#172b20;
+  background:#101f18;
   color:white;
   text-align:center;
   font-family:Arial;
 }
+h1 {color:gold;}
 canvas {
   width:95%;
-  background:#8bdcff;
-  border:3px solid white;
+  max-width:700px;
+  background:skyblue;
+  border:4px solid white;
+  touch-action:none;
 }
 button {
-  padding:15px;
+  padding:16px;
   margin:8px;
-  font-size:22px;
+  font-size:25px;
+  border-radius:10px;
 }
 </style>
 </head>
 <body>
-<h2>🎮 KARKI GAMING</h2>
-<p id="score">Coins: 0 / 20</p>
-<canvas id="game" width="700" height="350"></canvas>
+
+<h1>🎮 KARKI GAMING</h1>
+<h3 id="score">Level: 1 | Coins: 0</h3>
+
+<canvas id="game" width="700" height="340"></canvas>
+
 <div>
-<button id="left">⬅️</button>
-<button id="jump">⬆️</button>
-<button id="right">➡️</button>
+<button ontouchstart="left=true" ontouchend="left=false"
+onmousedown="left=true" onmouseup="left=false">⬅️</button>
+
+<button onclick="jump()">⬆️</button>
+
+<button ontouchstart="right=true" ontouchend="right=false"
+onmousedown="right=true" onmouseup="right=false">➡️</button>
 </div>
+
 <script>
 const c=document.getElementById("game");
 const ctx=c.getContext("2d");
-let p={x:30,y:265,w:25,h:35,vy:0};
-let coins=Array.from({length:20},(_,i)=>({
-x:60+i*30,y:220-(i%3)*35,got:false
-}));
-let keys={};
-let score=0;
-let won=false;
 
-function control(id,k){
-let b=document.getElementById(id);
-b.addEventListener("pointerdown",e=>{
-e.preventDefault();keys[k]=true;
+let player={x:30,y:270,w:25,h:35,vy:0};
+let left=false,right=false;
+let coins=0,level=1;
+let enemy={x:400,y:275,v:2};
+let collected=[];
+
+function makeCoins(){
+ collected=[];
+ for(let i=0;i<20;i++){
+ collected.push({
+ x:80+(i%10)*60,
+ y:180-Math.floor(i/10)*65,
+ got:false
+ });
+ }
+}
+makeCoins();
+
+function jump(){
+ if(player.y>=269) player.vy=-11;
+}
+
+document.addEventListener("keydown",e=>{
+ if(e.key==="ArrowLeft")left=true;
+ if(e.key==="ArrowRight")right=true;
+ if(e.key==="ArrowUp")jump();
 });
-["pointerup","pointerleave","pointercancel"]
-.forEach(t=>b.addEventListener(t,()=>keys[k]=false));
-}
-control("left","left");
-control("right","right");
-control("jump","jump");
-
-function loop(){
-ctx.clearRect(0,0,700,350);
-ctx.fillStyle="#55a95b";
-ctx.fillRect(0,305,700,45);
-ctx.fillStyle="#237b38";
-ctx.fillRect(0,330,700,20);
-
-if(keys.left)p.x-=3;
-if(keys.right)p.x+=3;
-
-if(keys.jump&&p.y+p.h>=305)p.vy=-11;
-p.vy+=0.5;
-p.y+=p.vy;
-
-if(p.y+p.h>=305){
-p.y=270;p.vy=0;
-}
-p.x=Math.max(0,Math.min(675,p.x));
-
-coins.forEach(o=>{
-if(!o.got){
-ctx.fillStyle="gold";
-ctx.beginPath();
-ctx.arc(o.x,o.y,8,0,Math.PI*2);
-ctx.fill();
-if(Math.abs(p.x-o.x)<18&&Math.abs(p.y-o.y)<25){
-o.got=true;score++;
-document.getElementById("score").innerText=
-"Coins: "+score+" / 20";
-}
-}
+document.addEventListener("keyup",e=>{
+ if(e.key==="ArrowLeft")left=false;
+ if(e.key==="ArrowRight")right=false;
 });
 
-ctx.fillStyle="red";
-ctx.fillRect(p.x,p.y,p.w,p.h);
-ctx.fillStyle="gold";
-ctx.fillRect(665,270,12,60);
-ctx.fillStyle="black";
-ctx.fillText("GOAL",645,255);
+function draw(){
+ ctx.clearRect(0,0,700,340);
 
-if(p.x>650&&score===20&&!won){
-won=true;
-alert("LEVEL 1 COMPLETE!");
+ ctx.fillStyle="green";
+ ctx.fillRect(0,295,700,45);
+
+ if(left)player.x-=4;
+ if(right)player.x+=4;
+
+ player.vy+=0.5;
+ player.y+=player.vy;
+
+ if(player.y>260){
+ player.y=260;
+ player.vy=0;
+ }
+
+ player.x=Math.max(0,Math.min(675,player.x));
+
+ ctx.fillStyle="red";
+ ctx.fillRect(player.x,player.y,player.w,player.h);
+
+ collected.forEach(o=>{
+ if(!o.got){
+ ctx.fillStyle="gold";
+ ctx.beginPath();
+ ctx.arc(o.x,o.y,9,0,Math.PI*2);
+ ctx.fill();
+
+ if(Math.abs(player.x-o.x)<25 &&
+ Math.abs(player.y-o.y)<25){
+ o.got=true;
+ coins++;
+ }
+ }
+ });
+
+ enemy.x+=enemy.v;
+ if(enemy.x>650||enemy.x<300)enemy.v*=-1;
+
+ ctx.fillStyle="purple";
+ ctx.fillRect(enemy.x,270,25,25);
+
+ ctx.fillStyle="yellow";
+ ctx.fillRect(660,260,15,40);
+
+ if(player.x>645){
+ level++;
+ player.x=20;
+ makeCoins();
+ }
+
+ document.getElementById("score").innerText=
+ "Level: "+level+" | Coins: "+coins;
+
+ requestAnimationFrame(draw);
 }
-if(!won)requestAnimationFrame(loop);
-}
-loop();
+draw();
 </script>
 </body>
 </html>
