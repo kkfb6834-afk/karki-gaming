@@ -1,0 +1,108 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KARKI GAMING</title>
+<style>
+body {
+  margin:0;
+  background:#172b20;
+  color:white;
+  text-align:center;
+  font-family:Arial;
+}
+canvas {
+  width:95%;
+  background:#8bdcff;
+  border:3px solid white;
+}
+button {
+  padding:15px;
+  margin:8px;
+  font-size:22px;
+}
+</style>
+</head>
+<body>
+<h2>🎮 KARKI GAMING</h2>
+<p id="score">Coins: 0 / 20</p>
+<canvas id="game" width="700" height="350"></canvas>
+<div>
+<button id="left">⬅️</button>
+<button id="jump">⬆️</button>
+<button id="right">➡️</button>
+</div>
+<script>
+const c=document.getElementById("game");
+const ctx=c.getContext("2d");
+let p={x:30,y:265,w:25,h:35,vy:0};
+let coins=Array.from({length:20},(_,i)=>({
+x:60+i*30,y:220-(i%3)*35,got:false
+}));
+let keys={};
+let score=0;
+let won=false;
+
+function control(id,k){
+let b=document.getElementById(id);
+b.addEventListener("pointerdown",e=>{
+e.preventDefault();keys[k]=true;
+});
+["pointerup","pointerleave","pointercancel"]
+.forEach(t=>b.addEventListener(t,()=>keys[k]=false));
+}
+control("left","left");
+control("right","right");
+control("jump","jump");
+
+function loop(){
+ctx.clearRect(0,0,700,350);
+ctx.fillStyle="#55a95b";
+ctx.fillRect(0,305,700,45);
+ctx.fillStyle="#237b38";
+ctx.fillRect(0,330,700,20);
+
+if(keys.left)p.x-=3;
+if(keys.right)p.x+=3;
+
+if(keys.jump&&p.y+p.h>=305)p.vy=-11;
+p.vy+=0.5;
+p.y+=p.vy;
+
+if(p.y+p.h>=305){
+p.y=270;p.vy=0;
+}
+p.x=Math.max(0,Math.min(675,p.x));
+
+coins.forEach(o=>{
+if(!o.got){
+ctx.fillStyle="gold";
+ctx.beginPath();
+ctx.arc(o.x,o.y,8,0,Math.PI*2);
+ctx.fill();
+if(Math.abs(p.x-o.x)<18&&Math.abs(p.y-o.y)<25){
+o.got=true;score++;
+document.getElementById("score").innerText=
+"Coins: "+score+" / 20";
+}
+}
+});
+
+ctx.fillStyle="red";
+ctx.fillRect(p.x,p.y,p.w,p.h);
+ctx.fillStyle="gold";
+ctx.fillRect(665,270,12,60);
+ctx.fillStyle="black";
+ctx.fillText("GOAL",645,255);
+
+if(p.x>650&&score===20&&!won){
+won=true;
+alert("LEVEL 1 COMPLETE!");
+}
+if(!won)requestAnimationFrame(loop);
+}
+loop();
+</script>
+</body>
+</html>
