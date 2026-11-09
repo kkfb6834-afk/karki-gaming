@@ -3,42 +3,33 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>KARKI GAMING 2.0</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>KARKI GAMING 3.0</title>
 <style>
-body {
-  margin:0;
-  background:#101827;
-  color:white;
-  text-align:center;
-  font-family:Arial;
+body{
+ margin:0;background:#101827;color:white;
+ text-align:center;font-family:Arial;
 }
-h1 {color:#ffd43b}
-canvas {
-  width:95%;
-  max-width:800px;
-  border:3px solid white;
-  border-radius:12px;
-  touch-action:none;
+h1{color:#ffd43b}
+canvas{
+ width:96%;max-width:800px;
+ border:3px solid white;border-radius:12px;
+ touch-action:none;
 }
-button {
-  padding:14px;
-  margin:5px;
-  border:0;
-  border-radius:12px;
-  background:#315b86;
-  color:white;
-  font-size:22px;
+button{
+ padding:14px;margin:5px;border:0;
+ border-radius:12px;background:#315b86;
+ color:white;font-size:22px;
 }
-#controls {
-  display:grid;
-  grid-template-columns:repeat(3,65px);
-  justify-content:center;
+#controls{
+ display:grid;grid-template-columns:70px 70px 70px;
+ justify-content:center;
 }
-#up {grid-column:2}
-#left {grid-column:1}
-#right {grid-column:3}
-#restart {background:#15965b}
+#up{grid-column:2}
+#left{grid-column:1}
+#right{grid-column:3}
+#down{grid-column:2}
+#restart{background:#15965b}
 </style>
 </head>
 <body>
@@ -48,7 +39,7 @@ button {
 
 <canvas id="game" width="800" height="450"></canvas>
 
-<h3 id="message">Collect all coins and reach EXIT!</h3>
+<h3 id="msg">Collect coins and reach EXIT!</h3>
 
 <div id="controls">
 <button id="up" data-key="up">⬆️</button>
@@ -57,140 +48,124 @@ button {
 <button id="down" data-key="down">⬇️</button>
 </div>
 
-<button id="restart">🔄 Restart Game</button>
+<button id="restart">🔄 Restart</button>
 
 <script>
 const canvas=document.getElementById("game");
 const ctx=canvas.getContext("2d");
 
-const W=800,H=450;
-
-let player={x:45,y:45,size:25,speed:190};
+let level=1,coins=0,total=0;
+let player={x:35,y:35,w:24,h:24};
 let keys={};
-let level=1;
-let coins=0;
-let total=0;
-let gameOver=false;
-let finished=false;
-let coinList=[];
-let enemies=[];
-let walls=[];
-let lastTime=0;
+let coinList=[],walls=[],enemies=[];
+let won=false;
 
-function setupLevel(){
+const themes=[
+ "#72b95e","#398bc0","#a56a42",
+ "#55b6ad","#694c9c"
+];
 
- coinList=[];
- enemies=[];
- walls=[];
+function setup(){
+ coins=0;won=false;
+ player.x=35;player.y=35;
+ coinList=[];walls=[];enemies=[];
 
- total=level===1?6:level===2?8:10;
+ total=5+level;
 
  for(let i=0;i<total;i++){
   coinList.push({
-   x:100+(i*137)%620,
-   y:90+(i*79)%280,
+   x:100+(i*113)%630,
+   y:85+(i*71)%285,
    taken:false
   });
  }
 
  walls=[
-  {x:180,y:100,w:65,h:65},
-  {x:370,y:180,w:70,h:45},
-  {x:550,y:80,w:55,h:70},
-  {x:200,y:300,w:75,h:40}
+  {x:170,y:100,w:65,h:65},
+  {x:350,y:180,w:75,h:45},
+  {x:540,y:80,w:55,h:70},
+  {x:190,y:310,w:75,h:40}
  ];
 
- enemies=[
-  {x:350,y:100,min:280,max:500,speed:85},
-  {x:600,y:320,min:500,max:700,speed:65}
- ];
-
- if(level===3){
-  enemies.push({
-   x:420,y:250,min:300,max:600,speed:100
-  });
+ if(level>=2){
+  walls.push({x:440,y:330,w:90,h:35});
  }
 
- player.x=45;
- player.y=45;
- coins=0;
- gameOver=false;
- finished=false;
+ if(level>=3){
+  walls.push({x:620,y:200,w:45,h:75});
+ }
 
- document.getElementById("message").textContent=
- "Level "+level+" - Collect all coins!";
+ enemies=[
+  {x:300,y:270,min:260,max:470,s:75,d:1}
+ ];
+
+ if(level>=2){
+  enemies.push({x:560,y:130,min:500,max:690,s:90,d:1});
+ }
+
+ if(level>=4){
+  enemies.push({x:390,y:370,min:300,max:550,s:110,d:1});
+ }
+
+ document.getElementById("msg").textContent=
+ "Level "+level+" - Collect every coin!";
 }
 
 function blocked(x,y){
-
- if(x<12||y<12||x+25>788||y+25>438)
- return true;
+ if(x<5||y<5||x+24>795||y+24>445)return true;
 
  return walls.some(w=>
-  x+25>w.x &&
-  x<w.x+w.w &&
-  y+25>w.y &&
-  y<w.y+w.h
+ x+24>w.x&&x<w.x+w.w&&
+ y+24>w.y&&y<w.y+w.h
  );
 }
 
 function update(dt){
-
- if(gameOver||finished)return;
+ if(won)return;
 
  let dx=0,dy=0;
-
  if(keys.left)dx=-1;
  if(keys.right)dx=1;
  if(keys.up)dy=-1;
  if(keys.down)dy=1;
 
- if(dx&&dy){
-  dx*=0.707;
-  dy*=0.707;
- }
-
- let nx=player.x+dx*player.speed*dt;
- let ny=player.y+dy*player.speed*dt;
+ let speed=190;
+ let nx=player.x+dx*speed*dt;
+ let ny=player.y+dy*speed*dt;
 
  if(!blocked(nx,player.y))player.x=nx;
  if(!blocked(player.x,ny))player.y=ny;
 
  coinList.forEach(c=>{
-  if(!c.taken &&
-  Math.hypot(player.x+12-c.x,
-  player.y+12-c.y)<23){
+  if(!c.taken&&Math.hypot(
+  player.x+12-c.x,player.y+12-c.y)<22){
    c.taken=true;
    coins++;
   }
  });
 
  enemies.forEach(e=>{
-  e.x+=e.speed*dt*(e.direction||1);
+  e.x+=e.s*e.d*dt;
+  if(e.x<e.min||e.x>e.max)e.d*=-1;
 
-  if(e.x<e.min||e.x>e.max){
-   e.direction=(e.direction||1)*-1;
-  }
-
-  if(Math.hypot(player.x+12-e.x,
-  player.y+12-270)<25){
-   player.x=45;
-   player.y=45;
-   document.getElementById("message").textContent=
-   "Friendly slime! Try again.";
+  if(Math.hypot(
+  player.x+12-e.x,
+  player.y+12-e.y)<25){
+   player.x=35;
+   player.y=35;
+   document.getElementById("msg").textContent=
+   "Oops! Try again!";
   }
  });
 
- if(coins===total &&
- player.x>720 && player.y>350){
-
-  if(level<3){
+ if(coins===total&&player.x>720&&player.y>350){
+  if(level<5){
    level++;
-   setupLevel();
+   setup();
   }else{
-   finished=true;
-   document.getElementById("message").textContent=
-   "🏆 YOU WON KARKI GAMING!";
+   won=true;
+   document.getElementById("msg").textContent=
+   "🏆 CONGRATULATIONS! KARKI GAMING WON!";
   }
  }
 
@@ -199,80 +174,63 @@ function update(dt){
 }
 
 function draw(){
+ ctx.fillStyle=themes[level-1];
+ ctx.fillRect(0,0,800,450);
 
- ctx.clearRect(0,0,W,H);
-
- ctx.fillStyle=
- level===1?"#75bd65":
- level===2?"#345e9c":"#563d78";
-
- ctx.fillRect(0,0,W,H);
-
- // Stars
- for(let i=0;i<30;i++){
-  ctx.fillStyle="rgba(255,255,255,.2)";
-  ctx.fillRect((i*97)%800,(i*61)%450,4,4);
+ for(let i=0;i<35;i++){
+  ctx.fillStyle="rgba(255,255,255,.15)";
+  ctx.fillRect(i*73%800,i*47%450,4,4);
  }
 
- // Walls
  walls.forEach(w=>{
-  ctx.fillStyle="#76533a";
+  ctx.fillStyle="#76513b";
   ctx.fillRect(w.x,w.y,w.w,w.h);
  });
 
- // Coins
  coinList.forEach(c=>{
   if(!c.taken){
-   ctx.fillStyle="#ffdc35";
+   ctx.fillStyle="#ffdf32";
    ctx.beginPath();
    ctx.arc(c.x,c.y,10,0,Math.PI*2);
    ctx.fill();
-   ctx.strokeStyle="white";
-   ctx.stroke();
   }
  });
 
- // Enemies
  enemies.forEach(e=>{
-  ctx.fillStyle="#54e0bd";
+  ctx.fillStyle="#42e0c0";
   ctx.beginPath();
-  ctx.arc(e.x,270,14,0,Math.PI*2);
+  ctx.arc(e.x,e.y,14,0,Math.PI*2);
   ctx.fill();
-
   ctx.fillStyle="#123";
-  ctx.fillRect(e.x-6,266,4,4);
-  ctx.fillRect(e.x+3,266,4,4);
+  ctx.fillRect(e.x-6,e.y-4,4,4);
+  ctx.fillRect(e.x+3,e.y-4,4,4);
  });
 
- // Exit
- ctx.fillStyle=coins===total?"#13d68b":"#777";
- ctx.fillRect(735,365,35,45);
-
+ ctx.fillStyle=coins===total?"#13e68a":"#777";
+ ctx.fillRect(740,365,35,45);
  ctx.fillStyle="white";
  ctx.font="14px Arial";
- ctx.fillText("EXIT",735,360);
+ ctx.fillText("EXIT",740,358);
 
- // Player
- ctx.fillStyle="#ff5252";
- ctx.fillRect(player.x,player.y,25,25);
-
+ ctx.fillStyle="#ff4e62";
+ ctx.fillRect(player.x,player.y,24,24);
  ctx.fillStyle="white";
- ctx.fillRect(player.x+5,player.y+6,5,5);
- ctx.fillRect(player.x+16,player.y+6,5,5);
+ ctx.fillRect(player.x+5,player.y+5,5,5);
+ ctx.fillRect(player.x+15,player.y+5,5,5);
 }
 
+let last=0;
 function loop(t){
- let dt=Math.min((t-lastTime)/1000||0,0.04);
- lastTime=t;
+ let dt=Math.min((t-last)/1000||0,0.04);
+ last=t;
  update(dt);
  draw();
  requestAnimationFrame(loop);
 }
 
 window.addEventListener("keydown",e=>{
- const k=e.key.toLowerCase();
+ let k=e.key.toLowerCase();
  if(k.startsWith("arrow"))e.preventDefault();
-
  if(k==="arrowup"||k==="w")keys.up=true;
  if(k==="arrowdown"||k==="s")keys.down=true;
  if(k==="arrowleft"||k==="a")keys.left=true;
@@ -280,8 +238,7 @@ window.addEventListener("keydown",e=>{
 });
 
 window.addEventListener("keyup",e=>{
- const k=e.key.toLowerCase();
-
+ let k=e.key.toLowerCase();
  if(k==="arrowup"||k==="w")keys.up=false;
  if(k==="arrowdown"||k==="s")keys.down=false;
  if(k==="arrowleft"||k==="a")keys.left=false;
@@ -289,27 +246,21 @@ window.addEventListener("keyup",e=>{
 });
 
 document.querySelectorAll("[data-key]").forEach(b=>{
- const k=b.dataset.key;
-
+ let k=b.dataset.key;
  b.addEventListener("pointerdown",e=>{
-  e.preventDefault();
-  keys[k]=true;
+  e.preventDefault();keys[k]=true;
  });
-
  ["pointerup","pointerleave","pointercancel"].forEach(ev=>{
   b.addEventListener(ev,()=>keys[k]=false);
  });
 });
 
 document.getElementById("restart").onclick=()=>{
- level=1;
- keys={};
- setupLevel();
+ level=1;keys={};setup();
 };
 
-setupLevel();
+setup();
 requestAnimationFrame(loop);
 </script>
-
 </body>
 </html>
