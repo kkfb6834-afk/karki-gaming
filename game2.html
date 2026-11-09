@@ -1,0 +1,315 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KARKI GAMING 2.0</title>
+<style>
+body {
+  margin:0;
+  background:#101827;
+  color:white;
+  text-align:center;
+  font-family:Arial;
+}
+h1 {color:#ffd43b}
+canvas {
+  width:95%;
+  max-width:800px;
+  border:3px solid white;
+  border-radius:12px;
+  touch-action:none;
+}
+button {
+  padding:14px;
+  margin:5px;
+  border:0;
+  border-radius:12px;
+  background:#315b86;
+  color:white;
+  font-size:22px;
+}
+#controls {
+  display:grid;
+  grid-template-columns:repeat(3,65px);
+  justify-content:center;
+}
+#up {grid-column:2}
+#left {grid-column:1}
+#right {grid-column:3}
+#restart {background:#15965b}
+</style>
+</head>
+<body>
+
+<h1>⭐ KARKI GAMING ⭐</h1>
+<h3 id="score">Level: 1 | Coins: 0</h3>
+
+<canvas id="game" width="800" height="450"></canvas>
+
+<h3 id="message">Collect all coins and reach EXIT!</h3>
+
+<div id="controls">
+<button id="up" data-key="up">⬆️</button>
+<button id="left" data-key="left">⬅️</button>
+<button id="right" data-key="right">➡️</button>
+<button id="down" data-key="down">⬇️</button>
+</div>
+
+<button id="restart">🔄 Restart Game</button>
+
+<script>
+const canvas=document.getElementById("game");
+const ctx=canvas.getContext("2d");
+
+const W=800,H=450;
+
+let player={x:45,y:45,size:25,speed:190};
+let keys={};
+let level=1;
+let coins=0;
+let total=0;
+let gameOver=false;
+let finished=false;
+let coinList=[];
+let enemies=[];
+let walls=[];
+let lastTime=0;
+
+function setupLevel(){
+
+ coinList=[];
+ enemies=[];
+ walls=[];
+
+ total=level===1?6:level===2?8:10;
+
+ for(let i=0;i<total;i++){
+  coinList.push({
+   x:100+(i*137)%620,
+   y:90+(i*79)%280,
+   taken:false
+  });
+ }
+
+ walls=[
+  {x:180,y:100,w:65,h:65},
+  {x:370,y:180,w:70,h:45},
+  {x:550,y:80,w:55,h:70},
+  {x:200,y:300,w:75,h:40}
+ ];
+
+ enemies=[
+  {x:350,y:100,min:280,max:500,speed:85},
+  {x:600,y:320,min:500,max:700,speed:65}
+ ];
+
+ if(level===3){
+  enemies.push({
+   x:420,y:250,min:300,max:600,speed:100
+  });
+ }
+
+ player.x=45;
+ player.y=45;
+ coins=0;
+ gameOver=false;
+ finished=false;
+
+ document.getElementById("message").textContent=
+ "Level "+level+" - Collect all coins!";
+}
+
+function blocked(x,y){
+
+ if(x<12||y<12||x+25>788||y+25>438)
+ return true;
+
+ return walls.some(w=>
+  x+25>w.x &&
+  x<w.x+w.w &&
+  y+25>w.y &&
+  y<w.y+w.h
+ );
+}
+
+function update(dt){
+
+ if(gameOver||finished)return;
+
+ let dx=0,dy=0;
+
+ if(keys.left)dx=-1;
+ if(keys.right)dx=1;
+ if(keys.up)dy=-1;
+ if(keys.down)dy=1;
+
+ if(dx&&dy){
+  dx*=0.707;
+  dy*=0.707;
+ }
+
+ let nx=player.x+dx*player.speed*dt;
+ let ny=player.y+dy*player.speed*dt;
+
+ if(!blocked(nx,player.y))player.x=nx;
+ if(!blocked(player.x,ny))player.y=ny;
+
+ coinList.forEach(c=>{
+  if(!c.taken &&
+  Math.hypot(player.x+12-c.x,
+  player.y+12-c.y)<23){
+   c.taken=true;
+   coins++;
+  }
+ });
+
+ enemies.forEach(e=>{
+  e.x+=e.speed*dt*(e.direction||1);
+
+  if(e.x<e.min||e.x>e.max){
+   e.direction=(e.direction||1)*-1;
+  }
+
+  if(Math.hypot(player.x+12-e.x,
+  player.y+12-270)<25){
+   player.x=45;
+   player.y=45;
+   document.getElementById("message").textContent=
+   "Friendly slime! Try again.";
+  }
+ });
+
+ if(coins===total &&
+ player.x>720 && player.y>350){
+
+  if(level<3){
+   level++;
+   setupLevel();
+  }else{
+   finished=true;
+   document.getElementById("message").textContent=
+   "🏆 YOU WON KARKI GAMING!";
+  }
+ }
+
+ document.getElementById("score").textContent=
+ "Level: "+level+" | Coins: "+coins+"/"+total;
+}
+
+function draw(){
+
+ ctx.clearRect(0,0,W,H);
+
+ ctx.fillStyle=
+ level===1?"#75bd65":
+ level===2?"#345e9c":"#563d78";
+
+ ctx.fillRect(0,0,W,H);
+
+ // Stars
+ for(let i=0;i<30;i++){
+  ctx.fillStyle="rgba(255,255,255,.2)";
+  ctx.fillRect((i*97)%800,(i*61)%450,4,4);
+ }
+
+ // Walls
+ walls.forEach(w=>{
+  ctx.fillStyle="#76533a";
+  ctx.fillRect(w.x,w.y,w.w,w.h);
+ });
+
+ // Coins
+ coinList.forEach(c=>{
+  if(!c.taken){
+   ctx.fillStyle="#ffdc35";
+   ctx.beginPath();
+   ctx.arc(c.x,c.y,10,0,Math.PI*2);
+   ctx.fill();
+   ctx.strokeStyle="white";
+   ctx.stroke();
+  }
+ });
+
+ // Enemies
+ enemies.forEach(e=>{
+  ctx.fillStyle="#54e0bd";
+  ctx.beginPath();
+  ctx.arc(e.x,270,14,0,Math.PI*2);
+  ctx.fill();
+
+  ctx.fillStyle="#123";
+  ctx.fillRect(e.x-6,266,4,4);
+  ctx.fillRect(e.x+3,266,4,4);
+ });
+
+ // Exit
+ ctx.fillStyle=coins===total?"#13d68b":"#777";
+ ctx.fillRect(735,365,35,45);
+
+ ctx.fillStyle="white";
+ ctx.font="14px Arial";
+ ctx.fillText("EXIT",735,360);
+
+ // Player
+ ctx.fillStyle="#ff5252";
+ ctx.fillRect(player.x,player.y,25,25);
+
+ ctx.fillStyle="white";
+ ctx.fillRect(player.x+5,player.y+6,5,5);
+ ctx.fillRect(player.x+16,player.y+6,5,5);
+}
+
+function loop(t){
+ let dt=Math.min((t-lastTime)/1000||0,0.04);
+ lastTime=t;
+ update(dt);
+ draw();
+ requestAnimationFrame(loop);
+}
+
+window.addEventListener("keydown",e=>{
+ const k=e.key.toLowerCase();
+ if(k.startsWith("arrow"))e.preventDefault();
+
+ if(k==="arrowup"||k==="w")keys.up=true;
+ if(k==="arrowdown"||k==="s")keys.down=true;
+ if(k==="arrowleft"||k==="a")keys.left=true;
+ if(k==="arrowright"||k==="d")keys.right=true;
+});
+
+window.addEventListener("keyup",e=>{
+ const k=e.key.toLowerCase();
+
+ if(k==="arrowup"||k==="w")keys.up=false;
+ if(k==="arrowdown"||k==="s")keys.down=false;
+ if(k==="arrowleft"||k==="a")keys.left=false;
+ if(k==="arrowright"||k==="d")keys.right=false;
+});
+
+document.querySelectorAll("[data-key]").forEach(b=>{
+ const k=b.dataset.key;
+
+ b.addEventListener("pointerdown",e=>{
+  e.preventDefault();
+  keys[k]=true;
+ });
+
+ ["pointerup","pointerleave","pointercancel"].forEach(ev=>{
+  b.addEventListener(ev,()=>keys[k]=false);
+ });
+});
+
+document.getElementById("restart").onclick=()=>{
+ level=1;
+ keys={};
+ setupLevel();
+};
+
+setupLevel();
+requestAnimationFrame(loop);
+</script>
+
+</body>
+</html>
